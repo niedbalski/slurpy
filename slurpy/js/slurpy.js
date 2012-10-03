@@ -30,7 +30,8 @@ var Slurpy = (function() {
     Slurpy.prototype.load = function() {
         return this.send(
             python.utils.hydrate({ 
-                'action': python.messages.LOAD 
+                'action': python.messages.LOAD,
+                'functions' : Object.keys(python.get_js_functions()) 
             })
         );
     }
@@ -68,7 +69,6 @@ var Slurpy = (function() {
                         python[message.functions[func]] = 
                             python.utils.wrap(message.functions[func]);
                     }
-                    
                     python.emit('loaded', event);
                     break;
                 }
@@ -80,16 +80,16 @@ var Slurpy = (function() {
 
                 case 'execute': {
                     try {
-                        method = self.lookup(message.method).apply(this, message.args);
+                        method = python.lookup(message.method).apply(this, message.args);
                     } catch(error) {
-                        method = self.lookup(message.method)(message.args);
+                        method = python.lookup(message.method)(message.args);
                     } finally {
                         var callback = undefined || null;
                         for(var method in message.kwargs) {
                             if ( method == 'callback' ) 
                                 callback = message.kwargs.callback;
                         }
-                        return self.py_return(f, callback);
+                        return python.py_return(method, callback);
                     }
                     
                     break;
@@ -100,7 +100,7 @@ var Slurpy = (function() {
 
     Slurpy.prototype.py_return = function(value, callback) {
         this.websocket.send(
-            this.hydrate({   
+            this.utils.hydrate({   
                 'action': 'return', 
                 'result' : value ,
                 'callback' : callback 
