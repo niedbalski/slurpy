@@ -10,6 +10,10 @@ setup(
     author="Jorge Niedbalski R.",
     author_email="jnr@pyrosome.org",
     description="Call python methods from javascript and viceversa",
+    keywords="rpc javascript js-rpc javascript-rpc call python from javascript slurpy slurpe slurp",
     include_package_data=True,
-    license="BSD"
+    license="BSD",
+    classifiers=['Development Status :: 3 - Alpha',
+                'Intended Audience :: Developers',
+                'Operating System :: Unix ']
 )
