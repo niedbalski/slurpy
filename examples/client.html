@@ -2,8 +2,14 @@
     <head>
        <script type="text/javascript" src="http://localhost:51711/slurpy/js"></script>
        <script type="text/javascript">
+
+            //invoked by the python code
+            var js_sum = function(a, b) {
+                return a + b;
+            }
+
             python.on('loaded', function(evt) {
-                python.sum(10.5,1000, function(response) {
+                python.sum(10, 1000, function(response) {
                     alert(response);    
                 });
             });
