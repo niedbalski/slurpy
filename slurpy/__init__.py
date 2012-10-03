@@ -15,7 +15,7 @@ javascript = None
 class Javascript:
 
     def __init__(self, functions, websocket):
-        self.functions = functions;
+        self.functions = functions
         self.websocket = websocket
 
     def __getattr__(self, name):
@@ -25,17 +25,19 @@ class Javascript:
         return method
 
     def run(self, name, *args, **kwargs):
-        self.websocket.write_message(json.dumps(
-                        {'method': name, 'args': args, 'kwargs': kwargs}))
+        self.websocket.write_message(json.dumps({'method': name,
+                                                 'args': args,
+                                                 'kwargs': kwargs}))
+
 
 class SlurpyJSHandler(web.RequestHandler):
-    
-    def initialize(self, address, port):
-        self.address = address
+
+    def initialize(self, host, port):
+        self.host = host
         self.port = port
 
     def get(self):
-        return template("slurpy.js", { 'host': self.address, 'port': self.port })
+        return self.render("js/slurpy.js", host=self.host, port=self.port)
 
 
 class SlurpyHandler(websocket.WebSocketHandler):
@@ -62,15 +64,17 @@ class SlurpyHandler(websocket.WebSocketHandler):
 
     def execute_handler(self, message):
         if 'args' in message:
-            response = self.methods[message['method']](*message['args'].values())
+            response = \
+                self.methods[message['method']](*message['args'].values())
         else:
             response = self.methods[message['method']]()
 
-        self.response({'action': 'callback', 'fn': message['callback'], 'response': response})
+        self.response({'action': 'callback', 'fn': message['callback'],
+                       'response': response})
 
     def hydrate_message(self, action, message):
         try:
-            handler = getattr(self, action + "_handler" )
+            handler = getattr(self, action + "_handler")
         except AttributeError:
             raise Exception("Not found method %s " % action)
 
@@ -99,8 +103,8 @@ class Slurpy:
 
     methods = {}
 
-    def __init__(self, address="localhost", port=51711):
-        self.address = address
+    def __init__(self, host="localhost", port=51711):
+        self.host = host
         self.port = port
 
     def register_method(self, method):
@@ -115,14 +119,14 @@ class Slurpy:
         """
             Start the server using a tornado Application
         """
-        self.application = web.Application([
-            (r'/slurpy', SlurpyHandler, dict(methods=self.methods)),
-            (r'/slurpy/js', SlurpyHandler, dict(address=self.address, port=self.port))
-        ], {'template_path': os.path.join(_HERE, 'js')})
+        self.application = \
+            web.Application([
+                (r'/slurpy', SlurpyHandler, dict(methods=self.methods)),
+                (r'/slurpy/js', SlurpyJSHandler,
+                    dict(host=self.host, port=self.port))])
 
         http_server = httpserver.HTTPServer(self.application)
         http_server.listen(self.port)
 
         ioloop.IOLoop.instance().start()
-        logger.debug("Started slurpy server - Registered methods: %s" % \
-                                                            self.methods)
+        logger.debug("Started slurpy server -methods: %s" % self.methods)
