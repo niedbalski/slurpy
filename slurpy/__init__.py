@@ -1,0 +1,128 @@
+import logging
+import sys
+import json
+import os
+
+from tornado import websocket, ioloop, httpserver, web, template
+
+
+_HERE = os.path.abspath(os.path.dirname(__file__))
+
+logger = logging.getLogger('slurpy')
+javascript = None
+
+
+class Javascript:
+
+    def __init__(self, functions, websocket):
+        self.functions = functions;
+        self.websocket = websocket
+
+    def __getattr__(self, name):
+        def method(*args, **kwargs):
+            if name in self.functions:
+                self.run(name, *args, **kwargs)
+        return method
+
+    def run(self, name, *args, **kwargs):
+        self.websocket.write_message(json.dumps(
+                        {'method': name, 'args': args, 'kwargs': kwargs}))
+
+class SlurpyJSHandler(web.RequestHandler):
+    
+    def initialize(self, address, port):
+        self.address = address
+        self.port = port
+
+    def get(self):
+        return template("slurpy.js", { 'host': self.address, 'port': self.port })
+
+
+class SlurpyHandler(websocket.WebSocketHandler):
+
+    def initialize(self, methods):
+        self.methods = methods
+
+    def get(self):
+        print self
+
+    def on_open(self):
+        logger.info("Accepted a new websocket connection: %s" % self)
+        pass
+
+    def response(self, message):
+        self.write_message(json.dumps(message))
+
+    def load_javascript(self, functions):
+        global javascript
+        javascript = Javascript(functions, self)
+
+    def load_handler(self, message):
+        self.response({'action': 'load', 'functions': self.methods.keys()})
+
+    def execute_handler(self, message):
+        if 'args' in message:
+            response = self.methods[message['method']](*message['args'].values())
+        else:
+            response = self.methods[message['method']]()
+
+        self.response({'action': 'callback', 'fn': message['callback'], 'response': response})
+
+    def hydrate_message(self, action, message):
+        try:
+            handler = getattr(self, action + "_handler" )
+        except AttributeError:
+            raise Exception("Not found method %s " % action)
+
+        return handler(message)
+
+    def on_message(self, message):
+        try:
+            message = json.loads(message)
+        except Exception as ex:
+            logger.error(ex)
+            raise
+
+        if not 'action' in message:
+            raise Exception("Please specify a valid action to be executed")
+
+        message = self.hydrate_message(message['action'], message)
+
+    def on_result(self, result):
+        javascript.alert(result)
+
+    def on_close(self):
+        return
+
+
+class Slurpy:
+
+    methods = {}
+
+    def __init__(self, address="localhost", port=51711):
+        self.address = address
+        self.port = port
+
+    def register_method(self, method):
+        if callable(method):
+            if method in self.methods:
+                raise Exception("Function %s already exists" % method.__name__)
+            self.methods[method.__name__] = method
+            return True
+        return False
+
+    def start(self):
+        """
+            Start the server using a tornado Application
+        """
+        self.application = web.Application([
+            (r'/slurpy', SlurpyHandler, dict(methods=self.methods)),
+            (r'/slurpy/js', SlurpyHandler, dict(address=self.address, port=self.port))
+        ], {'template_path': os.path.join(_HERE, 'js')})
+
+        http_server = httpserver.HTTPServer(self.application)
+        http_server.listen(self.port)
+
+        ioloop.IOLoop.instance().start()
+        logger.debug("Started slurpy server - Registered methods: %s" % \
+                                                            self.methods)
