@@ -2,8 +2,8 @@ var Slurpy = (function() {
 
     function Slurpy(hostname, port) {
         this.events = {};
-        this.port = port || 51711;
-        this.hostname = hostname || window.location.hostname;
+        this.port = port || {{ port }};
+        this.hostname = hostname || "{{ host }}";
         
         this.websocket = new WebSocket("ws://" + this.hostname + ":" + this.port + "/slurpy" );
         this.websocket.onopen = this.load;
