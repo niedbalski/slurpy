@@ -13,33 +13,42 @@ Install the package using pip
 Usage
 ----
 
-* Create a new Slurpy server instance
+* Create a new Slurpy server instance, in this case, we are gonna
+call the "js_sum" method from python
 
 ```python
-from slurpy import Slurpy
+import slurpy
 
 def sum(a,b):
+    slurpy.javascript.js_sum(1, 2, callback=on_js_sum_response)
     return a + b
 
-s = Slurpy()
+def on_js_sum_response(value):
+    print "The js_sum return =  %d" % value
 
-#register the method 'sum'
+s = slurpy.Slurpy()
 s.register_method(sum)
 
-#start the server
 s.start()
+
 ```
 
-* Then integrate on your HTML document 
+* Then integrate on your HTML document , defining the function to be called
+by the server.
 
 ```javascript
 <html>
     <head>
        <script type="text/javascript" src="http://localhost:51711/slurpy/js"></script>
        <script type="text/javascript">
-            python = new Slurpy();
+
+            //invoked by the python code
+            var js_sum = function(a, b) {
+                return a + b;
+            }
+
             python.on('loaded', function(evt) {
-                python.sum(100, 1000, function(response) {
+                python.sum(10, 1000, function(response) {
                     alert(response);    
                 });
             });
