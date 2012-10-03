@@ -3,6 +3,7 @@ import sys
 import json
 import os
 
+from slurpy.serialize import CallbackSerialize
 from tornado import websocket, ioloop, httpserver, web, template
 
 
@@ -25,9 +26,13 @@ class Javascript:
         return method
 
     def run(self, name, *args, **kwargs):
+        callback = None
+        if 'callback' in kwargs:
+            callback = CallbackSerialize.serialize(kwargs['callback'])
         self.websocket.write_message(json.dumps({'method': name,
-                                                 'args': args,
-                                                 'kwargs': kwargs}))
+                                                 'action': 'execute',
+                                                 'callback': callback,
+                                                 'args': args }))
 
 
 class SlurpyJSHandler(web.RequestHandler):
@@ -45,11 +50,7 @@ class SlurpyHandler(websocket.WebSocketHandler):
     def initialize(self, methods):
         self.methods = methods
 
-    def get(self):
-        print self
-
     def on_open(self):
-        logger.info("Accepted a new websocket connection: %s" % self)
         pass
 
     def response(self, message):
@@ -62,7 +63,17 @@ class SlurpyHandler(websocket.WebSocketHandler):
     def load_handler(self, message):
         self.response({'action': 'load', 'functions': self.methods.keys()})
 
+    def return_handler(self, message):
+        if 'callback' in message:
+            callback = CallbackSerialize.deserialize(message['callback'])
+            if 'result' in message:
+                return callback(message['result'])
+            return callback()
+
     def execute_handler(self, message):
+
+        self.load_javascript(message['functions'])
+
         if 'args' in message:
             response = \
                 self.methods[message['method']](*message['args'].values())
@@ -77,7 +88,6 @@ class SlurpyHandler(websocket.WebSocketHandler):
             handler = getattr(self, action + "_handler")
         except AttributeError:
             raise Exception("Not found method %s " % action)
-
         return handler(message)
 
     def on_message(self, message):
@@ -91,9 +101,6 @@ class SlurpyHandler(websocket.WebSocketHandler):
             raise Exception("Please specify a valid action to be executed")
 
         message = self.hydrate_message(message['action'], message)
-
-    def on_result(self, result):
-        javascript.alert(result)
 
     def on_close(self):
         return

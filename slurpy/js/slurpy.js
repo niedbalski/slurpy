@@ -53,6 +53,7 @@ var Slurpy = (function() {
                 'action': 'execute',
                 'args': arguments, 
                 'method': fn,
+                'functions' : Object.keys(python.get_js_functions()),
                 'callback': arguments[arguments.length-1].toString()
             })
         );
@@ -84,12 +85,7 @@ var Slurpy = (function() {
                     } catch(error) {
                         method = python.lookup(message.method)(message.args);
                     } finally {
-                        var callback = undefined || null;
-                        for(var method in message.kwargs) {
-                            if ( method == 'callback' ) 
-                                callback = message.kwargs.callback;
-                        }
-                        return python.py_return(method, callback);
+                        return python.py_return(method, message.callback);
                     }
                     
                     break;
