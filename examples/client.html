@@ -3,15 +3,24 @@
        <script type="text/javascript" src="http://localhost:51711/slurpy/js"></script>
        <script type="text/javascript">
 
-            //invoked by the python code
+            //callback invoked by the python code
             var js_sum = function(a, b) {
                 return a + b;
             }
 
             python.on('loaded', function(evt) {
+
+                python.dirname('/etc/passwd', function(response) {
+                    console.log(response);
+                });
+
                 python.sum(10, 1000, function(response) {
                     alert(response);    
                 });
             });
 
         </script>
+    </head>
+    <body>
+    </body>
+</html>
