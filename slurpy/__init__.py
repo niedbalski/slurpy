@@ -75,7 +75,6 @@ class SlurpyHandler(websocket.WebSocketHandler):
             (md5sum, callback) = \
                     CallbackSerialize.deserialize(message['callback'])
 
-            import pdb; pdb.set_trace()
             if not md5sum in callbacks:
                 raise Exception("Invalid callback function call")
 
