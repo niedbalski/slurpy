@@ -10,6 +10,8 @@ from tornado import websocket, ioloop, httpserver, web, template
 _HERE = os.path.abspath(os.path.dirname(__file__))
 
 logger = logging.getLogger('slurpy')
+
+callbacks = []
 javascript = None
 
 
@@ -28,7 +30,12 @@ class Javascript:
     def run(self, name, *args, **kwargs):
         callback = None
         if 'callback' in kwargs:
-            callback = CallbackSerialize.serialize(kwargs['callback'])
+            (md5sum, callback) = \
+                    CallbackSerialize.serialize(kwargs['callback'])
+
+            if md5sum not in callbacks:
+                callbacks.extend({md5sum: callback})
+
         self.websocket.write_message(json.dumps({'method': name,
                                                  'action': 'execute',
                                                  'callback': callback,
@@ -65,9 +72,16 @@ class SlurpyHandler(websocket.WebSocketHandler):
 
     def return_handler(self, message):
         if 'callback' in message:
-            callback = CallbackSerialize.deserialize(message['callback'])
+            (md5sum, callback) = \
+                    CallbackSerialize.deserialize(message['callback'])
+
+            import pdb; pdb.set_trace()
+            if not md5sum in callbacks:
+                raise Exception("Invalid callback function call")
+
             if 'result' in message:
                 return callback(message['result'])
+
             return callback()
 
     def execute_handler(self, message):
