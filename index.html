@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Slurpy by niedbalski</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Slurpy</h1>
+        <p class="header">Python module to call python code from javascript and viceversa.</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/niedbalski/slurpy/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/niedbalski/slurpy/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/niedbalski/slurpy">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/niedbalski">niedbalski</a></p>
+
+
+      </header>
+      <section>
+        <h1>Slurpy</h1>
+
+<p>Slurpy is an RPC mechanism to call python methods from javascript and viceversa.</p>
+
+<h2>Installation</h2>
+
+<p>Install the package using pip</p>
+
+<pre><code>$ pip install slurpy
+</code></pre>
+
+<h2>Usage</h2>
+
+<ul>
+<li>Create a new Slurpy server instance, in this case, we are gonna
+call the "js_sum" method from python</li>
+</ul><div class="highlight"><pre><span class="kn">import</span> <span class="nn">slurpy</span>
+
+<span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+    <span class="n">slurpy</span><span class="o">.</span><span class="n">javascript</span><span class="o">.</span><span class="n">js_sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="n">on_js_sum_response</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+
+<span class="k">def</span> <span class="nf">on_js_sum_response</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">"The js_sum return =  </span><span class="si">%d</span><span class="s">"</span> <span class="o">%</span> <span class="n">value</span>
+
+<span class="n">s</span> <span class="o">=</span> <span class="n">slurpy</span><span class="o">.</span><span class="n">Slurpy</span><span class="p">()</span>
+<span class="n">s</span><span class="o">.</span><span class="n">register_method</span><span class="p">(</span><span class="nb">sum</span><span class="p">)</span>
+
+<span class="n">s</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+</pre></div>
+
+<ul>
+<li>Then integrate on your HTML document , defining the function to be called
+by the server.</li>
+</ul><div class="highlight"><pre><span class="o">&lt;</span><span class="nx">html</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">head</span><span class="o">&gt;</span>
+       <span class="o">&lt;</span><span class="nx">script</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text/javascript"</span> <span class="nx">src</span><span class="o">=</span><span class="s2">"http://localhost:51711/slurpy/js"</span><span class="o">/&gt;</span>
+       <span class="o">&lt;</span><span class="nx">script</span> <span class="nx">type</span><span class="o">=</span><span class="s2">"text/javascript"</span><span class="o">&gt;</span>
+
+            <span class="c1">//invoked by the python code</span>
+            <span class="kd">var</span> <span class="nx">js_sum</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="nx">python</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'loaded'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">evt</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">python</span><span class="p">.</span><span class="nx">sum</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">alert</span><span class="p">(</span><span class="nx">response</span><span class="p">);</span>    
+                <span class="p">})</span>
+            <span class="p">})</span>
+
+        <span class="o">&lt;</span><span class="err">/script&gt;</span>
+    <span class="o">&lt;</span><span class="err">/head&gt;</span>
+    <span class="o">&lt;</span><span class="nx">body</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="err">/body&gt;</span>
+<span class="o">&lt;</span><span class="err">/html&gt;</span>
+</pre></div>
+
+<ul>
+<li>Start the server</li>
+</ul><p>$ python your_slurpy_server.py</p>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>
