@@ -86,10 +86,11 @@ by the server.
 
 * Start the server
 
-     $python your_slurpy_server.py
+    $ python your_slurpy_server.py
 
 
-* Writing Plugins:
+Writing Plugins:
+================
 
 Starting from version 0.1.6 slurpy supports extension via Plugin.
 
@@ -97,7 +98,8 @@ Starting from version 0.1.6 slurpy supports extension via Plugin.
 
     * Example:
 
-```
+``` javascript
+
     <html>
     <head>
        <script type="text/javascript" src="http://localhost:51711/slurpy/js"></script>
@@ -111,7 +113,10 @@ Starting from version 0.1.6 slurpy supports extension via Plugin.
             var plugin = new python.Plugin("Sniffer");
             
             plugin.hooks = {
-                init: function() { //does nothing }, 
+                
+                init: function() { 
+                    //does nothing 
+                }, 
 
                 on_execute: function(message) {
                     console.log("Before execution " + message);
@@ -148,10 +153,4 @@ Starting from version 0.1.6 slurpy supports extension via Plugin.
     <body>
     </body>
 </html>
-
-
 ```
-                        
-
-
-

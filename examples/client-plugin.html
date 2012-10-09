@@ -11,7 +11,10 @@
             var plugin = new python.Plugin("Sniffer");
             
             plugin.hooks = {
-                init: function() { //does nothing }, 
+
+                init: function() { 
+                          //does nothing 
+                }, 
 
                 on_execute: function(message) {
                     console.log("Before execution " + message);
@@ -42,16 +45,6 @@
                 });
 
             });
-
-
-
-
-
-//            plugin.before_function_call('os.getuid', function(message) {});
-//            plugin.after_function_call('os.getuid', function(message) {});
-//            plugin.before_function_response();
-//            plugin.after_function_response();
-
 
         </script>
     </head>
