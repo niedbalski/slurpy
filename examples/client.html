@@ -8,7 +8,7 @@
                 return a + b;
             }
 
-            python.on('loaded', function(evt) {
+            python.on('ready', function(evt) {
                     
                 python.dirname('/etc/passwd', function(response) {
                     console.log("Directory name" + response);
