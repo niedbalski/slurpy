@@ -10,8 +10,8 @@ Install the package using pip
 
     $ pip install slurpy
 
-Usage
-----
+Basic usage
+-----------
 
 * Create a new Slurpy server instance. 
  With slurpy you can call javascript methods from the python function
@@ -87,5 +87,71 @@ by the server.
 * Start the server
 
      $python your_slurpy_server.py
+
+
+* Writing Plugins:
+
+Starting from version 0.1.6 slurpy supports extension via Plugin.
+
+    * Available hooks: Work in progress.
+
+    * Example:
+
+```
+    <html>
+    <head>
+       <script type="text/javascript" src="http://localhost:51711/slurpy/js"></script>
+       <script type="text/javascript">
+
+            //callback invoked by the python code
+            var js_sum = function(a, b) {
+                return a + b;
+            }
+
+            var plugin = new python.Plugin("Sniffer");
+            
+            plugin.hooks = {
+                init: function() { //does nothing }, 
+
+                on_execute: function(message) {
+                    console.log("Before execution " + message);
+                    return message;
+                }   
+            }
+
+            //plugin.disable()
+            plugin.activate();
+
+            python.on('ready', function(evt) {
+
+                python.dirname('/etc/passwd', function(response) {
+                    console.log("Directory name" + response);
+                });
+
+                python.os.getenv("HOME", function(response) {
+                    console.log("Home variable " + response);
+                });
+
+            
+                python.os.getuid(function(uid) {
+                    console.log("Current UID " + uid);
+                });
+
+                python.sum(10, 1000, function(response) {
+                    console.log("Sum result " + response);
+                });
+
+            });
+
+        </script>
+    </head>
+    <body>
+    </body>
+</html>
+
+
+```
+                        
+
 
 
