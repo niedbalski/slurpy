@@ -8,12 +8,51 @@ var Slurpy = (function() {
         this.websocket = new WebSocket("ws://" + this.hostname + ":" + this.port + "/slurpy" );
         this.websocket.onopen = this.load;
         this.websocket.onmessage = this.receive;
+        this.plugins = [];
+
+        this.on('ready', this.init_plugins);
     }
 
     Slurpy.prototype.messages = {
         LOAD : 'load',
         UNLOAD: 'unload'
     }
+
+    Slurpy.prototype.plugins_hooks = function(action, message) {
+        this.plugins.forEach(function(plugin, index) {
+            if(plugin.hooks.hasOwnProperty(action)) {
+                message = plugin.hooks[action](message) || {};
+            }
+        });
+        return message;
+    }
+
+    Slurpy.prototype.init_plugins = function() {
+        this.plugins.forEach(function(plugin, index) {
+            plugin.hooks.init();
+            console.log("Plugin " + plugin.name + " initialized");
+        });
+    }
+
+    Slurpy.prototype.Plugin = (function() {        
+
+        function Plugin(name) { 
+            this.name = name; 
+        }
+
+        Plugin.hooks = {};
+
+        Plugin.prototype.disable = function() {
+            return delete python.plugins[python.plugins.indexOf(this)];
+        }
+
+        Plugin.prototype.activate = function() {
+            python.plugins.push(this);
+        }
+
+        return Plugin;
+
+    })();
 
     Slurpy.prototype.on = function(event, callback) {
         if ( typeof this.events[event] === undefined || this.events[event] == null )
@@ -23,7 +62,7 @@ var Slurpy = (function() {
 
     Slurpy.prototype.emit = function(event, data) {
         for(var callback in this.events[event]) {
-            return this.events[event][callback].apply(this, data);
+            this.events[event][callback].apply(this, data);
         }
     }
 
@@ -85,8 +124,10 @@ var Slurpy = (function() {
         if ( message != undefined && message != '' ) {
             
             switch(message.action) {
-                case 'load' : {
 
+                //receive a load event from the backend
+                case 'load' : {
+                    //iterate functions and add them as object property
                     if ( message.functions ) {
                         for ( var func in message.functions ) {
                             python[message.functions[func]] = 
@@ -109,16 +150,18 @@ var Slurpy = (function() {
                         }
                     }
 
-                    python.emit('loaded', event);
+                    python.emit('ready', event);
                     break;
                 }
                 
                 case 'callback' : {
+                    message = python.plugins_hooks('on_callback', message);
                     var method = eval('(' + message.fn + ')')(message.response);
                     break;
                 }
 
-                case 'execute': {
+                case 'execute': { 
+                    message = python.plugins_hooks('on_execute', message);
                     try {
                         method = python.lookup(message.method).apply(this, message.args);
                     } catch(error) {
