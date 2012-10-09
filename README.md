@@ -37,7 +37,7 @@ s = slurpy.Slurpy()
 s.register(os)
 s.register(sum)
 
-s.run()
+s.start()
 ```
 
 * Then integrate on your HTML document , defining the function to be called
