@@ -40,12 +40,32 @@ var Slurpy = (function() {
         hydrate: function(message) {
             return JSON.stringify(message);
         },
+        
         wrap: function(fn) {
             return function() {
                 return this.call(fn, arguments);
             }
+        },
+
+        wrap_module: function(module, fn) {
+            return function() {
+                return python.call_module(module, fn, arguments);
+            }
         }
     }
+ 
+    Slurpy.prototype.call_module = function(module, fn, arguments) {
+        this.websocket.send(
+            this.utils.hydrate({ 
+                'action': 'execute',
+                'args': arguments,
+                'module': module, 
+                'method': fn,
+                'functions' : Object.keys(python.get_js_functions()),
+                'callback': arguments[arguments.length-1].toString()
+            })
+        );
+    } 
 
     Slurpy.prototype.call = function(fn, arguments) {
         this.websocket.send(
@@ -59,17 +79,36 @@ var Slurpy = (function() {
         );
     } 
 
-    Slurpy.prototype.receive = function(event) {
+   Slurpy.prototype.receive = function(event) {
         var message = eval('(' + event.data + ')');
 
         if ( message != undefined && message != '' ) {
             
             switch(message.action) {
                 case 'load' : {
-                    for ( var func in message.functions ) {
-                        python[message.functions[func]] = 
-                            python.utils.wrap(message.functions[func]);
+
+                    if ( message.functions ) {
+                        for ( var func in message.functions ) {
+                            python[message.functions[func]] = 
+                                python.utils.wrap(message.functions[func]);
+                        }
                     }
+
+                    if ( message.modules ) {
+                        var modules = Object.keys(message.modules);
+                        for ( var index in modules ) {
+                            var module = modules[index];
+                            
+                            if ( ! python[module] ) 
+                                python[module] = {}
+                            
+                            for ( var func in message.modules[module] ) {
+                                python[module][message.modules[module][func]] = 
+                                        python.utils.wrap_module(module, message.modules[module][func]);
+                            }
+                        }
+                    }
+
                     python.emit('loaded', event);
                     break;
                 }
@@ -87,7 +126,6 @@ var Slurpy = (function() {
                     } finally {
                         return python.py_return(method, message.callback);
                     }
-                    
                     break;
                 }
             }                        

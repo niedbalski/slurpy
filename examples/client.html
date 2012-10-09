@@ -9,14 +9,24 @@
             }
 
             python.on('loaded', function(evt) {
-
+                    
                 python.dirname('/etc/passwd', function(response) {
-                    console.log(response);
+                    console.log("Directory name" + response);
+                });
+
+                python.os.getenv("HOME", function(response) {
+                    console.log("Home variable " + response);
+                });
+
+            
+                python.os.getuid(function(uid) {
+                    console.log("Current UID " + uid);
                 });
 
                 python.sum(10, 1000, function(response) {
-                    alert(response);    
+                    console.log("Sum result " + response);
                 });
+
             });
 
         </script>

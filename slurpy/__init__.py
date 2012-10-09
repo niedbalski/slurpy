@@ -2,6 +2,7 @@ import logging
 import sys
 import json
 import os
+import types
 
 from slurpy.serialize import CallbackSerialize
 from tornado import websocket, ioloop, httpserver, web, template
@@ -67,8 +68,16 @@ class SlurpyHandler(websocket.WebSocketHandler):
         global javascript
         javascript = Javascript(functions, self)
 
+    def _hydrate_functions(self):
+        modules = {}
+        for module, methods in self.methods['modules'].items():
+                modules[module] = self.methods['modules'][module].keys()
+        return ( modules, self.methods['functions'].keys() )
+
     def load_handler(self, message):
-        self.response({'action': 'load', 'functions': self.methods.keys()})
+        (modules, functions) = self._hydrate_functions()
+        self.response({'action': 'load', 'functions': functions, \
+                                         'modules': modules})
 
     def return_handler(self, message):
         if 'callback' in message:
@@ -83,18 +92,23 @@ class SlurpyHandler(websocket.WebSocketHandler):
 
             return callback()
 
-    def execute_handler(self, message):
-
-        self.load_javascript(message['functions'])
+    def call_method(self, message):
+        if 'module' in message:
+            method = self.methods['modules'][message['module']][message['method']]
+        else:
+            method = self.methods['functions'][message['method']]
 
         if 'args' in message:
-            response = \
-                self.methods[message['method']](*message['args'].values())
+            response = method(*message['args'].values())
         else:
-            response = self.methods[message['method']]()
+            response = method()
 
+        return response
+
+    def execute_handler(self, message):
+        self.load_javascript(message['functions'])
         self.response({'action': 'callback', 'fn': message['callback'],
-                       'response': response})
+                       'response': self.call_method(message)})
 
     def hydrate_message(self, action, message):
         try:
@@ -121,19 +135,28 @@ class SlurpyHandler(websocket.WebSocketHandler):
 
 class Slurpy:
 
-    methods = {}
+    methods = { 'functions': {}, 'modules': {} }
 
     def __init__(self, host="localhost", port=51711):
         self.host = host
         self.port = port
 
-    def register_method(self, method):
-        if callable(method):
-            if method in self.methods:
-                raise Exception("Function %s already exists" % method.__name__)
-            self.methods[method.__name__] = method
-            return True
-        return False
+    def register(self, obj):
+        if callable(obj):
+            if  obj in self.methods['functions']:
+                raise Exception("Function %s already exists" % obj.__name__)
+            self.methods['functions'][obj.__name__] = obj
+        elif isinstance(obj, types.ModuleType):
+            for attr in obj.__dict__:
+                if isinstance(obj.__dict__[attr], types.FunctionType) or \
+                    isinstance(obj.__dict__[attr], types.BuiltinFunctionType) or \
+                        isinstance(obj.__dict__[attr], types.BuiltinMethodType):
+                    if not 'modules' in self.methods:
+                        self.methods['modules'] = {}
+                    if not obj.__name__ in self.methods['modules']:
+                        self.methods['modules'][obj.__name__] = {}
+                    self.methods['modules'][obj.__name__][attr] = \
+                                                    obj.__dict__[attr]
 
     def start(self):
         """
