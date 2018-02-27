@@ -1,12 +1,17 @@
 import logging
-import sys
 import json
 import os
 import types
 
 from slurpy.serialize import CallbackSerialize
 from tornado import websocket, ioloop, httpserver, web, template
+from tornado.util import PY3
 
+if PY3:
+    from urllib.parse import urlparse  # py3
+    xrange = range
+else:
+    from urlparse import urlparse  # py2
 
 _HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -55,6 +60,18 @@ class SlurpyJSHandler(web.RequestHandler):
 
 class SlurpyHandler(websocket.WebSocketHandler):
 
+    def check_origin(self, origin):
+        # see: check_origin from tornado.websocket
+        parsed_origin = urlparse(origin)
+        origin = parsed_origin.netloc
+        origin = origin.lower()
+        host = self.request.headers.get("Host")
+        if ":" in origin:
+            origin = origin[:origin.index(":")]
+        if ":" in host:
+            host = host[:host.index(":")]
+        return origin == host
+
     def initialize(self, methods):
         self.methods = methods
 
@@ -71,12 +88,12 @@ class SlurpyHandler(websocket.WebSocketHandler):
     def _hydrate_functions(self):
         modules = {}
         for module, methods in self.methods['modules'].items():
-                modules[module] = self.methods['modules'][module].keys()
-        return ( modules, self.methods['functions'].keys() )
+                modules[module] = list(self.methods['modules'][module].keys())
+        return modules, list(self.methods['functions'].keys())
 
     def load_handler(self, message):
         (modules, functions) = self._hydrate_functions()
-        self.response({'action': 'load', 'functions': functions, \
+        self.response({'action': 'load', 'functions': functions,
                                          'modules': modules})
 
     def return_handler(self, message):
